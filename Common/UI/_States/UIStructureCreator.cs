@@ -2,6 +2,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Nightshade.Utilities;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;
@@ -16,26 +17,26 @@ public sealed class UIStructureCreator : UIState
 {
     public Vector2 FirstPoint;
     public Vector2 LastPoint;
-    
-    public bool Selecting { get; private set; }
+
+    public bool SelectingArea { get; private set; }
 
     public bool HasSelectedFirstPoint { get; private set; }
     public bool HasSelectedLastPoint { get; private set; }
 
-    public UIStructureCreator() {
+    public UIStructureCreator() : base() {
         HAlign = 0.5f;
         VAlign = 2f;
 
-        Width.Set(32f, 0f);
-        Height.Set(32f, 0f);
-
-        SetPadding(4f);
+        Width.Set(64f, 0f);
+        Height.Set(64f, 0f);
     }
 
     public override void OnInitialize() {
+        base.OnInitialize();
+        
         var panel = new UIPanel {
-            Width = StyleDimension.FromPixels(32f),
-            Height = StyleDimension.FromPixels(32f)
+            Width = StyleDimension.FromPercent(1f),
+            Height = StyleDimension.FromPercent(1f)
         };
 
         panel.OnLeftClick += PanelOnLeftClick;
@@ -48,53 +49,40 @@ public sealed class UIStructureCreator : UIState
 
         VAlign = MathHelper.Lerp(VAlign, 1f, 0.1f);
 
-        var player = Main.LocalPlayer;
-
-        var justRightClicked = !player.mouseInterface && PlayerInput.MouseInfo.RightButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.RightButton == ButtonState.Released;
-
-        if (justRightClicked) {
-            ClearSelection();
-            return;
-        }
-
-        var justLeftClicked = !player.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Released;
-
-        if (!Selecting || !justLeftClicked) {
-            return;
-        }
-
-        if (!HasSelectedFirstPoint) {
-            FirstPoint = (Main.MouseWorld / 16f).Floor();
-            HasSelectedFirstPoint = true;
-
-            player.mouseInterface = true;
-            return;
-        }
-
-        if (!HasSelectedLastPoint) {
-            LastPoint = (Main.MouseWorld / 16f).Floor();
-            HasSelectedLastPoint = true;
-
-            player.mouseInterface = true;
-        }
+        HandleSelection();
+        HandleResizing();
     }
 
     public override void Draw(SpriteBatch spriteBatch) {
         base.Draw(spriteBatch);
 
-        if (!Selecting || !HasSelectedFirstPoint) {
+        if (!SelectingArea || !HasSelectedFirstPoint) {
             return;
         }
 
         var screenFirstPoint = FirstPoint * 16f - Main.screenPosition;
-        var screenLastPoint = (HasSelectedLastPoint ? LastPoint : (Main.MouseWorld / 16f).Floor()) * 16f - Main.screenPosition;
+        var screenLastPoint = (HasSelectedLastPoint ? LastPoint : Main.MouseWorld.SnapToTileCoordinates()) * 16f - Main.screenPosition;
 
         var rectangle = new Rectangle((int)MathF.Min(screenFirstPoint.X, screenLastPoint.X),
             (int)MathF.Min(screenFirstPoint.Y, screenLastPoint.Y),
             (int)MathF.Abs(screenFirstPoint.X - screenLastPoint.X),
             (int)MathF.Abs(screenFirstPoint.Y - screenLastPoint.Y));
 
-        spriteBatch.Draw(TextureAssets.MagicPixel.Value, rectangle, Color.White * (0.1f + MathF.Abs(MathF.Sin(Main.GameUpdateCount * 0.05f)) * 0.1f));
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, rectangle, Color.White * (0.1f + MathF.Abs(MathF.Sin(Main.GameUpdateCount * 0.05f)) * 0.025f));
+
+        var borderColor = Color.Black * 0.75f;
+
+        // Top border.
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(0, 0, Main.screenWidth, rectangle.Top), borderColor);
+
+        // Bottom border.
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(0, rectangle.Bottom, Main.screenWidth, (int)MathF.Abs(Main.screenHeight - rectangle.Bottom)), borderColor);
+
+        // Left border.
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(0, rectangle.Top, rectangle.Left, rectangle.Height), borderColor);
+
+        // Right border.
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.Right, rectangle.Top, (int)MathF.Abs(Main.screenWidth - rectangle.Left), rectangle.Height), borderColor);
 
         var outlineWidth = 2;
         var outlineColor = Color.Black;
@@ -110,6 +98,73 @@ public sealed class UIStructureCreator : UIState
 
         // Right outline.
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.Right, rectangle.Y, outlineWidth, rectangle.Height), outlineColor);
+
+        var pinSize = TextureAssets.Heart.Value.Size();
+        var pinColor = Color.White;
+
+        // Top left pin.
+        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X, rectangle.Y) - pinSize / 2f, pinColor);
+
+        // Top middle pin.
+        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X + rectangle.Width / 2f, rectangle.Y) - pinSize / 2f, pinColor);
+
+        // Top right pin.
+        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.Right, rectangle.Y) - pinSize / 2f, pinColor);
+
+        // Middle left pin.
+        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X, rectangle.Y + rectangle.Height / 2f) - pinSize / 2f, pinColor);
+
+        // Middle right pin.
+        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.Right, rectangle.Y + rectangle.Height / 2f) - pinSize / 2f, pinColor);
+
+        // Bottom left pin.
+        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X, rectangle.Bottom) - pinSize / 2f, pinColor);
+
+        // Bottom middle pin.
+        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X + rectangle.Width / 2f, rectangle.Bottom) - pinSize / 2f, pinColor);
+
+        // Bottom right pin.
+        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.Right, rectangle.Bottom) - pinSize / 2f, pinColor);
+    }
+
+    private void HandleSelection() {
+        var player = Main.LocalPlayer;
+
+        var justRightClicked = !player.mouseInterface && PlayerInput.MouseInfo.RightButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.RightButton == ButtonState.Released;
+
+        if (justRightClicked) {
+            ClearSelection();
+            return;
+        }
+
+        var justLeftClicked = !player.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Released;
+
+        if (!SelectingArea || !justLeftClicked) {
+            return;
+        }
+
+        if (!HasSelectedFirstPoint) {
+            FirstPoint = Main.MouseWorld.SnapToTileCoordinates();
+            HasSelectedFirstPoint = true;
+
+            player.mouseInterface = true;
+
+            SoundEngine.PlaySound(in SoundID.MenuTick);
+            return;
+        }
+
+        if (!HasSelectedLastPoint) {
+            LastPoint = Main.MouseWorld.SnapToTileCoordinates();
+            HasSelectedLastPoint = true;
+
+            player.mouseInterface = true;
+
+            SoundEngine.PlaySound(in SoundID.Unlock);
+        }
+    }
+
+    private void HandleResizing() {
+        if (!SelectingArea || !HasSelectedFirstPoint || !HasSelectedLastPoint) { }
     }
 
     private void ClearSelection() {
@@ -125,6 +180,6 @@ public sealed class UIStructureCreator : UIState
 
         ClearSelection();
 
-        Selecting = !Selecting;
+        SelectingArea = !SelectingArea;
     }
 }

@@ -1,1 +1,1 @@
-Nightshade is a pretty cool mod, it does...this. Modify this file with a description of your mod.
+Nightshade is a maintainable structure tool for tModLoader, providing an easy and concise way of creating custom structures for your mod as a developer.

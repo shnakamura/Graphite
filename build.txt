@@ -1,6 +1,7 @@
 displayName = Nightshade
 author = nakamurash
 version = 0.1
+homepage = https://github.com/shnakamura/Nightshade
 
 includeSource = true
 includePDB = true

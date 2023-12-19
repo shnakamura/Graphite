@@ -1,3 +1,9 @@
 displayName = Nightshade
 author = nakamurash
 version = 0.1
+
+includeSource = true
+includePDB = true
+
+hideCode = false
+hideResources = false

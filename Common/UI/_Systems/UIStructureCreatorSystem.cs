@@ -10,7 +10,7 @@ namespace Nightshade.Common.UI;
 public sealed class UIStructureCreatorSystem : ModSystem
 {
     private static GameTime lastGameTimeUpdate;
-    
+
     public static UserInterface CreatorInterface { get; private set; }
 
     public override void Load() {

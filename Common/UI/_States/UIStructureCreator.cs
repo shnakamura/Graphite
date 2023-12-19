@@ -4,30 +4,41 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Nightshade.Utilities;
 using Terraria;
-using Terraria.Audio;
 using Terraria.GameContent;
 using Terraria.GameInput;
-using Terraria.ID;
 using Terraria.UI;
 
 namespace Nightshade.Common.UI;
 
+/// <summary>
+///     Provides a user interface state that allows the user to select world tiles for saving a structure file.
+/// </summary>
 public sealed class UIStructureCreator : UIState
 {
-    private Player LocalPlayer => Main.LocalPlayer;
-    
+    /// <summary>
+    ///     Represents the first point selected for the structure area.
+    /// </summary>
     public Vector2 FirstPoint;
+
+    /// <summary>
+    ///     Represents the last point selected for the structure area.
+    /// </summary>
     public Vector2 LastPoint;
 
-    public bool HasSelectedFirstPoint { get; private set; }
-    public bool HasSelectedLastPoint { get; private set; }
+    private Player LocalPlayer => Main.LocalPlayer;
 
-    public override void Update(GameTime gameTime) {
-        base.Update(gameTime);
+    /// <summary>
+    ///     Indicates whether the structure area is currently being selected or not.
+    /// </summary>
+    public bool IsSelectingArea { get; private set; }
 
-        HandleEscaping();
-        HandleSelection();
-        HandleResizing();
+    /// <summary>
+    ///     Indicates whether the structure area has already been selected or not.
+    /// </summary>
+    public bool HasSelectedArea { get; private set; }
+
+    public override void OnInitialize() {
+        base.OnInitialize();
     }
 
     public override void OnActivate() {
@@ -42,18 +53,27 @@ public sealed class UIStructureCreator : UIState
         ClearSelection();
     }
 
+    public override void Update(GameTime gameTime) {
+        base.Update(gameTime);
+
+        HandleEscaping();
+        HandleText();
+        HandleSelection();
+        HandleResizing();
+    }
+
     public override void Draw(SpriteBatch spriteBatch) {
         base.Draw(spriteBatch);
-        
+
         var borderColor = Color.Black * 0.75f;
 
-        if (!HasSelectedFirstPoint) {
+        if (!HasSelectedArea && !IsSelectingArea) {
             spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(0, 0, Main.screenWidth, Main.screenHeight), borderColor);
             return;
         }
 
         var screenFirstPoint = FirstPoint * 16f - Main.screenPosition;
-        var screenLastPoint = (HasSelectedLastPoint ? LastPoint : Main.MouseWorld.SnapToTileCoordinates()) * 16f - Main.screenPosition;
+        var screenLastPoint = LastPoint * 16f - Main.screenPosition;
 
         var rectangle = new Rectangle((int)MathF.Min(screenFirstPoint.X, screenLastPoint.X),
             (int)MathF.Min(screenFirstPoint.Y, screenLastPoint.Y),
@@ -88,72 +108,59 @@ public sealed class UIStructureCreator : UIState
 
         // Right outline.
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.Right, rectangle.Y, outlineWidth, rectangle.Height), outlineColor);
-
-        var pinSize = TextureAssets.Heart.Value.Size();
-        var pinColor = Color.White;
-
-        // Top left pin.
-        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X, rectangle.Y) - pinSize / 2f, pinColor);
-
-        // Top right pin.
-        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.Right, rectangle.Y) - pinSize / 2f, pinColor);
-
-        // Bottom left pin.
-        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X, rectangle.Bottom) - pinSize / 2f, pinColor);
-
-        // Bottom right pin.
-        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.Right, rectangle.Bottom) - pinSize / 2f, pinColor);
     }
 
     private void HandleEscaping() {
         var justRightClicked = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.RightButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.RightButton == ButtonState.Released;
         var justEscaped = Main.keyState.IsKeyDown(Keys.Escape) && !Main.oldKeyState.IsKeyDown(Keys.Escape);
-        
+
         if (!justRightClicked && !justEscaped) {
             return;
         }
 
         UIStructureCreatorSystem.Disable();
+
+        LocalPlayer.releaseInventory = false;
+        LocalPlayer.mouseInterface = true;
+    }
+
+    private void HandleText() {
+        if (HasSelectedArea || IsSelectingArea) {
+            return;
+        }
+
+        Main.instance.MouseText("Select area");
     }
 
     private void HandleSelection() {
         var justLeftClicked = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Released;
+        var justLeftReleased = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Released && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Pressed;
 
-        if (!justLeftClicked) {
-            return;
-        }
-
-        if (!HasSelectedFirstPoint) {
+        if (justLeftClicked) {
             FirstPoint = Main.MouseWorld.SnapToTileCoordinates();
-            HasSelectedFirstPoint = true;
 
-            LocalPlayer.mouseInterface = true;
+            IsSelectingArea = true;
+        }
 
-            SoundEngine.PlaySound(in SoundID.MenuTick);
+        if (justLeftReleased) {
+            IsSelectingArea = false;
+            HasSelectedArea = true;
+        }
+
+        if (!IsSelectingArea) {
             return;
         }
 
-        if (!HasSelectedLastPoint) {
-            LastPoint = Main.MouseWorld.SnapToTileCoordinates();
-            HasSelectedLastPoint = true;
-
-            LocalPlayer.mouseInterface = true;
-
-            SoundEngine.PlaySound(in SoundID.Unlock);
-        }
+        LastPoint = Main.MouseWorld.SnapToTileCoordinates();
     }
 
-    private void HandleResizing() {
-        if (!HasSelectedFirstPoint || !HasSelectedLastPoint) { }
-
-        // TODO: Handle snapped area resizing.
-    }
+    private void HandleResizing() { }
 
     private void ClearSelection() {
         FirstPoint = Vector2.Zero;
         LastPoint = Vector2.Zero;
 
-        HasSelectedLastPoint = false;
-        HasSelectedFirstPoint = false;
+        IsSelectingArea = false;
+        HasSelectedArea = false;
     }
 }

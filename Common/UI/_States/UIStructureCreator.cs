@@ -56,10 +56,9 @@ public sealed class UIStructureCreator : UIState
     public override void Update(GameTime gameTime) {
         base.Update(gameTime);
 
-        HandleEscaping();
         HandleText();
+        HandleEscaping();
         HandleSelection();
-        HandleResizing();
     }
 
     public override void Draw(SpriteBatch spriteBatch) {
@@ -109,7 +108,15 @@ public sealed class UIStructureCreator : UIState
         // Right outline.
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.Right, rectangle.Y, outlineWidth, rectangle.Height), outlineColor);
     }
+    
+    private void HandleText() {
+        if (HasSelectedArea || IsSelectingArea) {
+            return;
+        }
 
+        Main.instance.MouseText("Select area");
+    }
+    
     private void HandleEscaping() {
         var justRightClicked = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.RightButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.RightButton == ButtonState.Released;
         var justEscaped = Main.keyState.IsKeyDown(Keys.Escape) && !Main.oldKeyState.IsKeyDown(Keys.Escape);
@@ -124,15 +131,11 @@ public sealed class UIStructureCreator : UIState
         LocalPlayer.mouseInterface = true;
     }
 
-    private void HandleText() {
-        if (HasSelectedArea || IsSelectingArea) {
+    private void HandleSelection() {
+        if (HasSelectedArea) {
             return;
         }
-
-        Main.instance.MouseText("Select area");
-    }
-
-    private void HandleSelection() {
+        
         var justLeftClicked = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Released;
         var justLeftReleased = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Released && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Pressed;
 
@@ -153,8 +156,6 @@ public sealed class UIStructureCreator : UIState
 
         LastPoint = Main.MouseWorld.SnapToTileCoordinates();
     }
-
-    private void HandleResizing() { }
 
     private void ClearSelection() {
         FirstPoint = Vector2.Zero;

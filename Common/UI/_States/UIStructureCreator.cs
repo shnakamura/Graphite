@@ -6,7 +6,6 @@ using Nightshade.Utilities;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;
-using Terraria.GameContent.UI.Elements;
 using Terraria.GameInput;
 using Terraria.ID;
 using Terraria.UI;
@@ -15,48 +14,41 @@ namespace Nightshade.Common.UI;
 
 public sealed class UIStructureCreator : UIState
 {
+    private Player LocalPlayer => Main.LocalPlayer;
+    
     public Vector2 FirstPoint;
     public Vector2 LastPoint;
-
-    public bool SelectingArea { get; private set; }
 
     public bool HasSelectedFirstPoint { get; private set; }
     public bool HasSelectedLastPoint { get; private set; }
 
-    public UIStructureCreator() : base() {
-        HAlign = 0.5f;
-        VAlign = 2f;
-
-        Width.Set(64f, 0f);
-        Height.Set(64f, 0f);
-    }
-
-    public override void OnInitialize() {
-        base.OnInitialize();
-        
-        var panel = new UIPanel {
-            Width = StyleDimension.FromPercent(1f),
-            Height = StyleDimension.FromPercent(1f)
-        };
-
-        panel.OnLeftClick += PanelOnLeftClick;
-
-        Append(panel);
-    }
-
     public override void Update(GameTime gameTime) {
         base.Update(gameTime);
 
-        VAlign = MathHelper.Lerp(VAlign, 1f, 0.1f);
-
+        HandleEscaping();
         HandleSelection();
         HandleResizing();
     }
 
+    public override void OnActivate() {
+        base.OnActivate();
+
+        ClearSelection();
+    }
+
+    public override void OnDeactivate() {
+        base.OnDeactivate();
+
+        ClearSelection();
+    }
+
     public override void Draw(SpriteBatch spriteBatch) {
         base.Draw(spriteBatch);
+        
+        var borderColor = Color.Black * 0.75f;
 
-        if (!SelectingArea || !HasSelectedFirstPoint) {
+        if (!HasSelectedFirstPoint) {
+            spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(0, 0, Main.screenWidth, Main.screenHeight), borderColor);
             return;
         }
 
@@ -69,8 +61,6 @@ public sealed class UIStructureCreator : UIState
             (int)MathF.Abs(screenFirstPoint.Y - screenLastPoint.Y));
 
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, rectangle, Color.White * (0.1f + MathF.Abs(MathF.Sin(Main.GameUpdateCount * 0.05f)) * 0.025f));
-
-        var borderColor = Color.Black * 0.75f;
 
         // Top border.
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(0, 0, Main.screenWidth, rectangle.Top), borderColor);
@@ -105,41 +95,31 @@ public sealed class UIStructureCreator : UIState
         // Top left pin.
         spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X, rectangle.Y) - pinSize / 2f, pinColor);
 
-        // Top middle pin.
-        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X + rectangle.Width / 2f, rectangle.Y) - pinSize / 2f, pinColor);
-
         // Top right pin.
         spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.Right, rectangle.Y) - pinSize / 2f, pinColor);
 
-        // Middle left pin.
-        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X, rectangle.Y + rectangle.Height / 2f) - pinSize / 2f, pinColor);
-
-        // Middle right pin.
-        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.Right, rectangle.Y + rectangle.Height / 2f) - pinSize / 2f, pinColor);
-
         // Bottom left pin.
         spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X, rectangle.Bottom) - pinSize / 2f, pinColor);
-
-        // Bottom middle pin.
-        spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.X + rectangle.Width / 2f, rectangle.Bottom) - pinSize / 2f, pinColor);
 
         // Bottom right pin.
         spriteBatch.Draw(TextureAssets.Heart.Value, new Vector2(rectangle.Right, rectangle.Bottom) - pinSize / 2f, pinColor);
     }
 
-    private void HandleSelection() {
-        var player = Main.LocalPlayer;
-
-        var justRightClicked = !player.mouseInterface && PlayerInput.MouseInfo.RightButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.RightButton == ButtonState.Released;
-
-        if (justRightClicked) {
-            ClearSelection();
+    private void HandleEscaping() {
+        var justRightClicked = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.RightButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.RightButton == ButtonState.Released;
+        var justEscaped = Main.keyState.IsKeyDown(Keys.Escape) && !Main.oldKeyState.IsKeyDown(Keys.Escape);
+        
+        if (!justRightClicked && !justEscaped) {
             return;
         }
 
-        var justLeftClicked = !player.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Released;
+        UIStructureCreatorSystem.Disable();
+    }
 
-        if (!SelectingArea || !justLeftClicked) {
+    private void HandleSelection() {
+        var justLeftClicked = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Pressed && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Released;
+
+        if (!justLeftClicked) {
             return;
         }
 
@@ -147,7 +127,7 @@ public sealed class UIStructureCreator : UIState
             FirstPoint = Main.MouseWorld.SnapToTileCoordinates();
             HasSelectedFirstPoint = true;
 
-            player.mouseInterface = true;
+            LocalPlayer.mouseInterface = true;
 
             SoundEngine.PlaySound(in SoundID.MenuTick);
             return;
@@ -157,14 +137,16 @@ public sealed class UIStructureCreator : UIState
             LastPoint = Main.MouseWorld.SnapToTileCoordinates();
             HasSelectedLastPoint = true;
 
-            player.mouseInterface = true;
+            LocalPlayer.mouseInterface = true;
 
             SoundEngine.PlaySound(in SoundID.Unlock);
         }
     }
 
     private void HandleResizing() {
-        if (!SelectingArea || !HasSelectedFirstPoint || !HasSelectedLastPoint) { }
+        if (!HasSelectedFirstPoint || !HasSelectedLastPoint) { }
+
+        // TODO: Handle snapped area resizing.
     }
 
     private void ClearSelection() {
@@ -173,13 +155,5 @@ public sealed class UIStructureCreator : UIState
 
         HasSelectedLastPoint = false;
         HasSelectedFirstPoint = false;
-    }
-
-    private void PanelOnLeftClick(UIMouseEvent evt, UIElement listeningelement) {
-        SoundEngine.PlaySound(in SoundID.MenuTick);
-
-        ClearSelection();
-
-        SelectingArea = !SelectingArea;
     }
 }

@@ -9,27 +9,22 @@ namespace Nightshade.Common.UI;
 [Autoload(Side = ModSide.Client)]
 public sealed class UIStructureCreatorSystem : ModSystem
 {
-    public static UIStructureCreator CreatorState { get; private set; }
+    private static GameTime lastGameTimeUpdate;
+    
     public static UserInterface CreatorInterface { get; private set; }
 
     public override void Load() {
-        CreatorState = new UIStructureCreator();
-        CreatorState.Activate();
-
         CreatorInterface = new UserInterface();
-        CreatorInterface.SetState(CreatorState);
     }
 
     public override void Unload() {
-        CreatorState.Deactivate();
-        CreatorState = null;
-
-        CreatorInterface.SetState(null);
         CreatorInterface = null;
     }
 
     public override void UpdateUI(GameTime gameTime) {
         CreatorInterface.Update(gameTime);
+
+        lastGameTimeUpdate = gameTime;
     }
 
     public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers) {
@@ -42,8 +37,18 @@ public sealed class UIStructureCreatorSystem : ModSystem
         layers.Insert(index + 1, new LegacyGameInterfaceLayer("Nightshade:Selector", DrawSelectorUI));
     }
 
+    public static void Enable() {
+        CreatorInterface.SetState(new UIStructureCreator());
+        CreatorInterface.CurrentState.Activate();
+    }
+
+    public static void Disable() {
+        CreatorInterface.CurrentState.Deactivate();
+        CreatorInterface.SetState(null);
+    }
+
     private static bool DrawSelectorUI() {
-        CreatorInterface.Draw(Main.spriteBatch, new GameTime());
+        CreatorInterface.Draw(Main.spriteBatch, lastGameTimeUpdate);
 
         return true;
     }

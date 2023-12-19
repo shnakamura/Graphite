@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using Nightshade.Utilities;
 using Terraria;
 using Terraria.GameContent;
+using Terraria.GameContent.UI.Elements;
 using Terraria.GameInput;
 using Terraria.UI;
 
@@ -37,10 +38,10 @@ public sealed class UIStructureCreator : UIState
     /// </summary>
     public bool HasSelectedArea { get; private set; }
 
-    public override void OnInitialize() {
-        base.OnInitialize();
-    }
-
+    private UIImageButton saveButtonUI;
+    private UIImageButton closeButtonUI;
+    private UIImageButton retryButtonUI;
+    
     public override void OnActivate() {
         base.OnActivate();
 
@@ -59,6 +60,7 @@ public sealed class UIStructureCreator : UIState
         HandleText();
         HandleEscaping();
         HandleSelection();
+        HandleButtons();
     }
 
     public override void Draw(SpriteBatch spriteBatch) {
@@ -155,6 +157,17 @@ public sealed class UIStructureCreator : UIState
         }
 
         LastPoint = Main.MouseWorld.SnapToTileCoordinates();
+    }
+
+    private void HandleButtons() {
+        if (!HasChild(saveButtonUI)) {
+            saveButtonUI = new UIImageButton(Nightshade.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/SaveButton"));
+            
+            saveButtonUI.Top.Set(16f, 1f);
+            saveButtonUI.Left.Set(0f, 1f);
+            
+            Append(saveButtonUI);
+        }
     }
 
     private void ClearSelection() {

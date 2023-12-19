@@ -8,6 +8,8 @@ public sealed class Nightshade : Mod
 {
     public static readonly string PersonalPath = Path.Combine(Main.SavePath, "Nightshade");
 
+    public static Nightshade Instance => ModContent.GetInstance<Nightshade>();
+
     public override void Load() {
         Directory.CreateDirectory(PersonalPath);
     }

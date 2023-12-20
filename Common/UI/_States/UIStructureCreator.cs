@@ -19,12 +19,12 @@ public sealed class UIStructureCreator : UIState
     /// <summary>
     ///     Represents the first point selected for the structure area.
     /// </summary>
-    public Vector2 FirstPoint;
+    public Vector2 Start;
 
     /// <summary>
     ///     Represents the last point selected for the structure area.
     /// </summary>
-    public Vector2 LastPoint;
+    public Vector2 End;
 
     private Player LocalPlayer => Main.LocalPlayer;
 
@@ -37,10 +37,6 @@ public sealed class UIStructureCreator : UIState
     ///     Indicates whether the structure area has already been selected or not.
     /// </summary>
     public bool HasSelectedArea { get; private set; }
-
-    private UIImageButton saveButtonUI;
-    private UIImageButton closeButtonUI;
-    private UIImageButton retryButtonUI;
     
     public override void OnActivate() {
         base.OnActivate();
@@ -53,6 +49,25 @@ public sealed class UIStructureCreator : UIState
 
         ClearSelection();
     }
+    
+    public override void Recalculate() {
+        var screenFirstPoint = Start * 16f - Main.screenPosition;
+        var screenLastPoint = End * 16f - Main.screenPosition;
+
+        var start = (int)MathF.Min(screenFirstPoint.X, screenLastPoint.X);
+        var end = (int)MathF.Min(screenFirstPoint.Y, screenLastPoint.Y);
+
+        var width = (int)MathF.Abs(screenFirstPoint.X - screenLastPoint.X);
+        var height = (int)MathF.Abs(screenFirstPoint.Y - screenLastPoint.Y);
+        
+        Top.Set(end, 0f);
+        Left.Set(start, 0f);
+        
+        Width.Set(width, 0f);
+        Height.Set(height, 0f);
+        
+        base.Recalculate();
+    }
 
     public override void Update(GameTime gameTime) {
         base.Update(gameTime);
@@ -60,7 +75,6 @@ public sealed class UIStructureCreator : UIState
         HandleText();
         HandleEscaping();
         HandleSelection();
-        HandleButtons();
     }
 
     public override void Draw(SpriteBatch spriteBatch) {
@@ -73,13 +87,10 @@ public sealed class UIStructureCreator : UIState
             return;
         }
 
-        var screenFirstPoint = FirstPoint * 16f - Main.screenPosition;
-        var screenLastPoint = LastPoint * 16f - Main.screenPosition;
+        var screenFirstPoint = Start * 16f - Main.screenPosition;
+        var screenLastPoint = End * 16f - Main.screenPosition;
 
-        var rectangle = new Rectangle((int)MathF.Min(screenFirstPoint.X, screenLastPoint.X),
-            (int)MathF.Min(screenFirstPoint.Y, screenLastPoint.Y),
-            (int)MathF.Abs(screenFirstPoint.X - screenLastPoint.X),
-            (int)MathF.Abs(screenFirstPoint.Y - screenLastPoint.Y));
+        var rectangle = GetDimensions().ToRectangle();
 
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, rectangle, Color.White * (0.1f + MathF.Abs(MathF.Sin(Main.GameUpdateCount * 0.05f)) * 0.025f));
 
@@ -142,7 +153,7 @@ public sealed class UIStructureCreator : UIState
         var justLeftReleased = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Released && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Pressed;
 
         if (justLeftClicked) {
-            FirstPoint = Main.MouseWorld.SnapToTileCoordinates();
+            Start = Main.MouseWorld.SnapToTileCoordinates();
 
             IsSelectingArea = true;
         }
@@ -156,23 +167,12 @@ public sealed class UIStructureCreator : UIState
             return;
         }
 
-        LastPoint = Main.MouseWorld.SnapToTileCoordinates();
-    }
-
-    private void HandleButtons() {
-        if (!HasChild(saveButtonUI)) {
-            saveButtonUI = new UIImageButton(Nightshade.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/SaveButton"));
-            
-            saveButtonUI.Top.Set(16f, 1f);
-            saveButtonUI.Left.Set(0f, 1f);
-            
-            Append(saveButtonUI);
-        }
+        End = Main.MouseWorld.SnapToTileCoordinates();
     }
 
     private void ClearSelection() {
-        FirstPoint = Vector2.Zero;
-        LastPoint = Vector2.Zero;
+        Start = Vector2.Zero;
+        End = Vector2.Zero;
 
         IsSelectingArea = false;
         HasSelectedArea = false;

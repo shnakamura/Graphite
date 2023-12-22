@@ -7,7 +7,7 @@ using Terraria.UI;
 namespace Nightshade.Common.UI;
 
 [Autoload(Side = ModSide.Client)]
-public sealed class UIStructureCreatorSystem : ModSystem
+public sealed class UIScreenshotStructureSystem : ModSystem
 {
     private static GameTime lastGameTimeUpdate;
 
@@ -18,6 +18,9 @@ public sealed class UIStructureCreatorSystem : ModSystem
     }
 
     public override void Unload() {
+        CreatorInterface?.CurrentState?.Deactivate();
+        CreatorInterface?.SetState(null);
+        
         CreatorInterface = null;
     }
 
@@ -38,7 +41,7 @@ public sealed class UIStructureCreatorSystem : ModSystem
     }
 
     public static void Enable() {
-        CreatorInterface.SetState(new UIStructureCreator());
+        CreatorInterface.SetState(new UIScreenshotStructure());
         CreatorInterface.CurrentState.Activate();
     }
 

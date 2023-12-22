@@ -1,5 +1,4 @@
 using Nightshade.Common.UI;
-using Terraria;
 using Terraria.ModLoader;
 
 namespace Nightshade.Common.Keybinds;
@@ -16,11 +15,11 @@ public sealed class ScreenshotKeybindSystem : ModSystem
         ScreenshotKeybind = null;
     }
 
-    public override void PostUpdateInput() {
+    public override void PreUpdateWorld() {
         if (!ScreenshotKeybind.JustPressed) {
             return;
         }
-        
-        UIStructureCreatorSystem.Enable();
+
+        UIScreenshotStructureSystem.Enable();
     }
 }

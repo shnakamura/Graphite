@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 
-namespace Nightshade.Common.Generation;
+namespace Nightshade.Common;
 
 public readonly struct StructureAnchor
 {

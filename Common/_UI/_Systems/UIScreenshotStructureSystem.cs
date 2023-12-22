@@ -4,7 +4,7 @@ using Terraria;
 using Terraria.ModLoader;
 using Terraria.UI;
 
-namespace Nightshade.Common.UI;
+namespace Nightshade.Common;
 
 [Autoload(Side = ModSide.Client)]
 public sealed class UIScreenshotStructureSystem : ModSystem

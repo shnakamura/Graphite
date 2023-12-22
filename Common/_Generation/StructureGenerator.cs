@@ -1,3 +1,3 @@
-namespace Nightshade.Common.Generation;
+namespace Nightshade.Common;
 
 public sealed class StructureGenerator { }

@@ -1,3 +1,3 @@
-namespace Nightshade.Common.IO;
+namespace Nightshade.Common;
 
 public sealed class StructureSerializer { }

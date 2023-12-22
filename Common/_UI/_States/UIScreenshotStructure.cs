@@ -10,7 +10,7 @@ using Terraria.GameInput;
 using Terraria.Localization;
 using Terraria.UI;
 
-namespace Nightshade.Common.UI;
+namespace Nightshade.Common;
 
 public sealed class UIScreenshotStructure : UIState
 {

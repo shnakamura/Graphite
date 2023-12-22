@@ -1,7 +1,6 @@
-using Nightshade.Common.UI;
 using Terraria.ModLoader;
 
-namespace Nightshade.Common.Keybinds;
+namespace Nightshade.Common;
 
 public sealed class ScreenshotKeybindSystem : ModSystem
 {

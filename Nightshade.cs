@@ -1,22 +1,13 @@
-using System.IO;
-using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Content;
 using Terraria;
-using Terraria.Graphics.Effects;
-using Terraria.Graphics.Shaders;
 using Terraria.ModLoader;
 
 namespace Nightshade;
 
 public sealed class Nightshade : Mod
 {
-    public static readonly string PersonalPath = Path.Combine(Main.SavePath, "Nightshade");
-
     public static Nightshade Instance => ModContent.GetInstance<Nightshade>();
 
     public override void Load() {
-        Directory.CreateDirectory(PersonalPath);
-
         if (Main.dedServ) {
             return;
         }

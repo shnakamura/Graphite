@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\tModLoader.targets"/>
+    <Import Project="..\tModLoader.targets" />
 
     <PropertyGroup>
         <AssemblyName>Nightshade</AssemblyName>
@@ -10,12 +10,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="tModLoader.CodeAssist" Version="0.1.*"/>
+        <PackageReference Include="tModLoader.CodeAssist" Version="0.1.*" />
     </ItemGroup>
 
     <ItemGroup>
-        <Folder Include="Assets\Effects\"/>
-        <Folder Include="Assets\Textures\UI\"/>
+        <Folder Include="Assets\Effects\" />
+        <Folder Include="Assets\Textures\UI\" />
     </ItemGroup>
 
     <PropertyGroup>

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -163,7 +164,6 @@ public sealed class UIScreenshotStructure : UIState
             return;
         }
         
-
         End = Main.MouseWorld.SnapToTileCoordinates();
     }
 
@@ -179,8 +179,7 @@ public sealed class UIScreenshotStructure : UIState
 
                 return firstPosition.Y == lastPosition.Y ? firstPosition.X.CompareTo(lastPosition.X) : firstPosition.Y.CompareTo(lastPosition.Y);
             });
-
-
+        
         if (!IsResizingAny) {
             return;
         }

@@ -1,4 +1,9 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CUsers_005Cjoaov_005CDocuments_005CMy_0020Games_005CTerraria_005CtModLoader_005CModSources_005CNightshade_005Clib_005CNativeFileDialogSharp_002Edll/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CUsers_005Cjoaov_005CDocuments_005CMy_0020Games_005CTerraria_005CtModLoader_005CModSources_005CNightshade_005Clib_005Cnfd_002Edll/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CUsers_005Cjoaov_005CDocuments_005CMy_0020Games_005CTerraria_005CtModLoader_005CModSources_005CNightshade_005Clib_005CSystem_002ESecurity_002ECryptography_002EXml_002Edll/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CUsers_005Cjoaov_005CDocuments_005CMy_0020Games_005CTerraria_005CtModLoader_005CModSources_005CNightshade_005Clib_005CSystem_002EWindows_002EForms_002Edll/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/AddReferences/RecentPaths/=C_003A_005CUsers_005Cjoaov_005CDocuments_005CMy_0020Games_005CTerraria_005CtModLoader_005CModSources_005CNightshade_005Clib_005CWinForms_002Edll/@EntryIndexedValue">True</s:Boolean>
 	<s:String x:Key="/Default/CodeInspection/PencilsConfiguration/ActualSeverity/@EntryValue">ERROR</s:String>
 	<s:String x:Key="/Default/CodeInspection/PencilsConfiguration/FiltersState/=CodeStyle/@EntryIndexedValue">Off</s:String>
 	<s:String x:Key="/Default/CodeInspection/PencilsConfiguration/FiltersState/=NamingFilter/@EntryIndexedValue">Off</s:String>

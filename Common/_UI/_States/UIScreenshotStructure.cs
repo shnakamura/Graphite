@@ -1,26 +1,58 @@
 using System;
 using System.IO;
+using System.Reflection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Mono.Cecil.Cil;
+using MonoMod.Cil;
 using Nightshade.Utilities;
+using ReLogic.Content;
 using Terraria;
 using Terraria.GameContent;
 using Terraria.GameContent.UI.Elements;
 using Terraria.GameInput;
 using Terraria.Localization;
+using Terraria.ModLoader;
 using Terraria.UI;
 
 namespace Nightshade.Common;
 
 public sealed class UIScreenshotStructure : UIState
 {
-    private UIImageButton[] resizePins = new UIImageButton[4];
+    public static readonly Asset<Texture2D> ResizePinTexture = ModContent.Request<Texture2D>($"{nameof(Nightshade)}/Assets/Textures/UI/ResizePin", AssetRequestMode.ImmediateLoad);
 
+    public readonly UIImageButton[] ResizePins = new[] {
+        new UIImageButton(ResizePinTexture) {
+            Top = StyleDimension.FromPixelsAndPercent(-ResizePinTexture.Height() / 2f, 0f),
+            Left = StyleDimension.FromPixelsAndPercent(-ResizePinTexture.Width() / 2f, 0f),
+        },
+        new UIImageButton(ResizePinTexture) {
+            Top = StyleDimension.FromPixelsAndPercent(-ResizePinTexture.Height() / 2f, 0f),
+            Left = StyleDimension.FromPixelsAndPercent(-ResizePinTexture.Width() / 2f, 1f),
+        },
+        new UIImageButton(ResizePinTexture) {
+            Top = StyleDimension.FromPixelsAndPercent(-ResizePinTexture.Height() / 2f, 1f),
+            Left = StyleDimension.FromPixelsAndPercent(-ResizePinTexture.Width() / 2f, 0f),
+        },
+        new UIImageButton(ResizePinTexture) {
+            Top = StyleDimension.FromPixelsAndPercent(-ResizePinTexture.Height() / 2f, 1f),
+            Left = StyleDimension.FromPixelsAndPercent(-ResizePinTexture.Width() / 2f, 1f),
+        }
+    };
+
+    private nativefiledialog.nfdresult_t nfdResult;
+    private string nfdPath;
+    
     public Vector2 Start;
     public Vector2 End;
 
     private Player LocalPlayer => Main.LocalPlayer;
+
+    public ref UIImageButton TopLeftPin => ref ResizePins[0];
+    public ref UIImageButton TopRightPin => ref ResizePins[1];
+    public ref UIImageButton BottomLeftPin => ref ResizePins[2];
+    public ref UIImageButton BottomRightPin => ref ResizePins[3];
 
     public bool IsSelectingArea { get; private set; }
     public bool HasSelectedArea { get; private set; }
@@ -45,26 +77,44 @@ public sealed class UIScreenshotStructure : UIState
     }
 
     public override void Recalculate() {
-        var screenFirstPoint = Start * 16f - Main.screenPosition;
-        var screenLastPoint = End * 16f - Main.screenPosition;
+        var screenStart = Start * 16f - Main.screenPosition;
+        var screenEnd = End * 16f - Main.screenPosition;
 
-        var start = (int)MathF.Min(screenFirstPoint.X, screenLastPoint.X);
-        var end = (int)MathF.Min(screenFirstPoint.Y, screenLastPoint.Y);
+        var start = (int)MathF.Min(screenStart.X, screenEnd.X);
+        var end = (int)MathF.Min(screenStart.Y, screenEnd.Y);
 
-        var width = (int)MathF.Abs(screenFirstPoint.X - screenLastPoint.X);
-        var height = (int)MathF.Abs(screenFirstPoint.Y - screenLastPoint.Y);
+        var width = (int)MathF.Abs(screenStart.X - screenEnd.X);
+        var height = (int)MathF.Abs(screenStart.Y - screenEnd.Y);
 
         Top.Set(end, 0f);
         Left.Set(start, 0f);
 
         Width.Set(width, 0f);
         Height.Set(height, 0f);
-
+        
         base.Recalculate();
+    }
+
+    public override void RecalculateChildren() {
+        Array.Sort(ResizePins,
+            (first, last) => {
+                var firstPosition = first.GetOuterDimensions().Position();
+                var lastPosition = last.GetOuterDimensions().Position();
+
+                return firstPosition.Y == lastPosition.Y ? firstPosition.X.CompareTo(lastPosition.X) : firstPosition.Y.CompareTo(lastPosition.Y);
+            });
+        
+        base.RecalculateChildren();
     }
 
     public override void Update(GameTime gameTime) {
         base.Update(gameTime);
+
+        if (nfdResult == nativefiledialog.nfdresult_t.NFD_OKAY) {
+            StructureSerializer.SerializeStructure(nfdPath);
+            UIScreenshotStructureSystem.Disable();
+            return;
+        }
 
         HandleText();
         HandleEscaping();
@@ -97,23 +147,20 @@ public sealed class UIScreenshotStructure : UIState
         // Right border.
         spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.Right, rectangle.Top, (int)MathF.Abs(Main.screenWidth - rectangle.Left), rectangle.Height), borderColor);
 
-        if (Lighting.NotRetro) { }
-        else {
-            var outlineWidth = 2;
-            var outlineColor = Color.White;
+        var outlineWidth = 2;
+        var outlineColor = Color.White;
 
-            // Top outline.
-            spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.X, rectangle.Y - outlineWidth, rectangle.Width, outlineWidth), outlineColor);
+        // Top outline.
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.X, rectangle.Y - outlineWidth, rectangle.Width, outlineWidth), outlineColor);
 
-            // Bottom outline.
-            spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.X, rectangle.Bottom, rectangle.Width, outlineWidth), outlineColor);
+        // Bottom outline.
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.X, rectangle.Bottom, rectangle.Width, outlineWidth), outlineColor);
 
-            // Left outline.
-            spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.X - outlineWidth, rectangle.Y, outlineWidth, rectangle.Height), outlineColor);
+        // Left outline.
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.X - outlineWidth, rectangle.Y, outlineWidth, rectangle.Height), outlineColor);
 
-            // Right outline.
-            spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.Right, rectangle.Y, outlineWidth, rectangle.Height), outlineColor);
-        }
+        // Right outline.
+        spriteBatch.Draw(TextureAssets.MagicPixel.Value, new Rectangle(rectangle.Right, rectangle.Y, outlineWidth, rectangle.Height), outlineColor);
 
         base.Draw(spriteBatch);
     }
@@ -149,10 +196,10 @@ public sealed class UIScreenshotStructure : UIState
         var justLeftReleased = !LocalPlayer.mouseInterface && PlayerInput.MouseInfo.LeftButton == ButtonState.Released && PlayerInput.MouseInfoOld.LeftButton == ButtonState.Pressed;
 
         if (justLeftClicked) {
-            SetupResizePins();
-
             Start = Main.MouseWorld.SnapToTileCoordinates();
             IsSelectingArea = true;
+            
+            SetupResizePins();
         }
 
         if (justLeftReleased) {
@@ -168,28 +215,11 @@ public sealed class UIScreenshotStructure : UIState
     }
 
     private void HandleResizing() {
-        if (!HasSelectedArea) {
-            return;
-        }
-
-        Array.Sort(resizePins,
-            (first, last) => {
-                var firstPosition = first.GetOuterDimensions().Position();
-                var lastPosition = last.GetOuterDimensions().Position();
-
-                return firstPosition.Y == lastPosition.Y ? firstPosition.X.CompareTo(lastPosition.X) : firstPosition.Y.CompareTo(lastPosition.Y);
-            });
-        
         if (!IsResizingAny) {
             return;
         }
 
         var snappedMousePosition = Main.MouseWorld.SnapToTileCoordinates();
-
-        var topLeftPin = resizePins[0];
-        var topRightPin = resizePins[1];
-        var bottomLeftPin = resizePins[2];
-        var bottomRightPin = resizePins[3];
 
         if (IsResizingTopLeft) {
             Start = snappedMousePosition;
@@ -210,30 +240,25 @@ public sealed class UIScreenshotStructure : UIState
     }
 
     private void StartResizing(UIMouseEvent evt, UIElement element) {
-        var topLeftPin = resizePins[0];
-        var topRightPin = resizePins[1];
-        var bottomLeftPin = resizePins[2];
-        var bottomRightPin = resizePins[3];
-
-        if (element == topLeftPin) {
+        if (element == TopLeftPin) {
             IsResizingTopLeft = true;
             IsResizingTopRight = false;
             IsResizingBottomLeft = false;
             IsResizingBottomRight = false;
         }
-        else if (element == topRightPin) {
+        else if (element == TopRightPin) {
             IsResizingTopLeft = false;
             IsResizingTopRight = true;
             IsResizingBottomLeft = false;
             IsResizingBottomRight = false;
         }
-        else if (element == bottomLeftPin) {
+        else if (element == BottomLeftPin) {
             IsResizingTopLeft = false;
             IsResizingTopRight = false;
             IsResizingBottomLeft = true;
             IsResizingBottomRight = false;
         }
-        else if (element == bottomRightPin) {
+        else if (element == BottomRightPin) {
             IsResizingTopLeft = false;
             IsResizingTopRight = false;
             IsResizingBottomLeft = false;
@@ -242,11 +267,8 @@ public sealed class UIScreenshotStructure : UIState
     }
 
     private void StopResizing(UIMouseEvent evt, UIElement element) {
-        var topLeftPin = resizePins[0];
-        var bottomRightPin = resizePins[3];
-
-        Start = (topLeftPin.GetDimensions().Center() + Main.screenPosition).SnapToTileCoordinates();
-        End = (bottomRightPin.GetDimensions().Center() + Main.screenPosition).SnapToTileCoordinates();
+        Start = (TopLeftPin.GetDimensions().Center() + Main.screenPosition).SnapToTileCoordinates();
+        End = (BottomRightPin.GetDimensions().Center() + Main.screenPosition).SnapToTileCoordinates();
 
         IsResizingTopLeft = false;
         IsResizingTopRight = false;
@@ -255,52 +277,52 @@ public sealed class UIScreenshotStructure : UIState
     }
 
     private void SetupResizePins() {
-        var texture = Nightshade.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/ResizePin");
+        var list = new UIList() {
+            Top = StyleDimension.FromPercent(0f),
+            Left = StyleDimension.FromPixelsAndPercent(32f, 1f), 
+            Width = StyleDimension.FromPixels(32f),
+            Height = StyleDimension.FromPercent(1f)
+        };
 
-        resizePins = new UIImageButton[4];
+        list.ListPadding = 16;
 
-        if (!HasChild(resizePins[0])) {
-            resizePins[0] = new UIImageButton(texture);
-            resizePins[0].Top.Set(-resizePins[0].Height.Pixels / 2f, 0f);
-            resizePins[0].Left.Set(-resizePins[0].Width.Pixels / 2f, 0f);
+        var close = new UIImageButton(Nightshade.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/CloseButton"));
+        close.OnLeftClick += (evt, element) => UIScreenshotStructureSystem.Disable();
 
-            resizePins[0].OnLeftMouseDown += StartResizing;
-            resizePins[0].OnLeftMouseUp += StopResizing;
+        var save = new UIImageButton(Nightshade.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/SaveButton"));
+        save.OnLeftClick += (evt, element) => nfdResult = nativefiledialog.NFD_SaveDialog("ngtsh", Main.SavePath, out nfdPath);
+        
+        list.Add(close);
+        list.Add(save);
 
-            Append(resizePins[0]);
+        Append(list);
+        
+        if (!HasChild(TopLeftPin)) {
+            TopLeftPin.OnLeftMouseDown += StartResizing;
+            TopLeftPin.OnLeftMouseUp += StopResizing;
+
+            Append(TopLeftPin);
         }
 
-        if (!HasChild(resizePins[1])) {
-            resizePins[1] = new UIImageButton(texture);
-            resizePins[1].Top.Set(-resizePins[1].Height.Pixels / 2f, 0f);
-            resizePins[1].Left.Set(-resizePins[1].Width.Pixels / 2f, 1f);
+        if (!HasChild(TopRightPin)) {
+            TopRightPin.OnLeftMouseDown += StartResizing;
+            TopRightPin.OnLeftMouseUp += StopResizing;
 
-            resizePins[1].OnLeftMouseDown += StartResizing;
-            resizePins[1].OnLeftMouseUp += StopResizing;
-
-            Append(resizePins[1]);
+            Append(TopRightPin);
         }
 
-        if (!HasChild(resizePins[2])) {
-            resizePins[2] = new UIImageButton(texture);
-            resizePins[2].Top.Set(-resizePins[2].Height.Pixels / 2f, 1f);
-            resizePins[2].Left.Set(-resizePins[2].Width.Pixels / 2f, 0f);
+        if (!HasChild(BottomLeftPin)) {
+            BottomLeftPin.OnLeftMouseDown += StartResizing;
+            BottomLeftPin.OnLeftMouseUp += StopResizing;
 
-            resizePins[2].OnLeftMouseDown += StartResizing;
-            resizePins[2].OnLeftMouseUp += StopResizing;
-
-            Append(resizePins[2]);
+            Append(BottomLeftPin);
         }
 
-        if (!HasChild(resizePins[3])) {
-            resizePins[3] = new UIImageButton(texture);
-            resizePins[3].Top.Set(-resizePins[3].Height.Pixels / 2f, 1f);
-            resizePins[3].Left.Set(-resizePins[3].Width.Pixels / 2f, 1f);
+        if (!HasChild(BottomRightPin)) {
+            BottomRightPin.OnLeftMouseDown += StartResizing;
+            BottomRightPin.OnLeftMouseUp += StopResizing;
 
-            resizePins[3].OnLeftMouseDown += StartResizing;
-            resizePins[3].OnLeftMouseUp += StopResizing;
-
-            Append(resizePins[3]);
+            Append(BottomRightPin);
         }
     }
 
@@ -310,5 +332,10 @@ public sealed class UIScreenshotStructure : UIState
 
         IsSelectingArea = false;
         HasSelectedArea = false;
+        
+        IsResizingTopLeft = false;
+        IsResizingTopRight = false;
+        IsResizingBottomLeft = false;
+        IsResizingBottomRight = false;
     }
 }
